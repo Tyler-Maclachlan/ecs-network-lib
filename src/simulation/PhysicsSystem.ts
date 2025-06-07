@@ -7,6 +7,7 @@ import { Edge } from "@core/components/Edge";
 import { DebugSpring } from "@core/components/DebugSpring";
 import { DebugRepulsion } from "@core/components/DebugRepulsion";
 import { DebugGravity } from "@core/components/DebugGravity";
+import { FixedPosition } from "@core/components/FixedPosition";
 
 export interface PhysicsConfig {
     repulsionStrength: number;
@@ -18,9 +19,9 @@ export interface PhysicsConfig {
 }
 
 const defaultConfig: PhysicsConfig = {
-    repulsionStrength: 2000,
-    springLength: 100,
-    springStiffness: 0.001,
+    repulsionStrength: 1000,
+    springLength: 50,
+    springStiffness: 0.08,
     damping: 0.85,
     gravityStrength: 0.002,
     maxVelocity: 5
@@ -55,11 +56,12 @@ export class PhysicsSystem implements System {
 
         // 1. Repulsion
         for (const a of entities) {
-            if (!Position.hasComponent(a)) continue;
+            if (!Position.hasComponent(a) || FixedPosition.has(a)) continue;
+
             //seen.add(a);
 
             for (const b of entities) {
-                if (a === b || !Position.hasComponent(b)) continue;
+                if (a === b || !Position.hasComponent(b) || FixedPosition.has(b)) continue;
 
                 const dx = Position.X[a] - Position.X[b];
                 const dy = Position.Y[a] - Position.Y[b];
@@ -93,7 +95,7 @@ export class PhysicsSystem implements System {
         const centerY = window.innerHeight / 2;
 
         for (const entity of entities) {
-            if (!Position.hasComponent(entity) || !Velocity.hasComponent(entity)) continue;
+            if (!Position.hasComponent(entity) || !Velocity.hasComponent(entity) || FixedPosition.has(entity)) continue;
 
             const dx = centerX - Position.X[entity];
             const dy = centerY - Position.Y[entity];
@@ -141,7 +143,7 @@ export class PhysicsSystem implements System {
 
         // 4. Apply velocity + damping + clamp
         for (const entity of entities) {
-            if (!Position.hasComponent(entity) || !Velocity.hasComponent(entity)) continue;
+            if (!Position.hasComponent(entity) || !Velocity.hasComponent(entity) || FixedPosition.has(entity)) continue;
 
             let vx = Velocity.X[entity];
             let vy = Velocity.Y[entity];
