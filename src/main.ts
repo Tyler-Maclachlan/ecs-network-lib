@@ -7,6 +7,7 @@ import { PixiRenderer } from "@render/PixiRenderer";
 import { Edge } from "@core/components/Edge";
 
 import { generateScaleFreeGraph } from "@utils/generateScaleFreeGraph";
+import { InteractionSystem } from "@core/systems/InteractionSystem";
 
 const world = new World();
 const runner = new SystemRunner(world);
@@ -14,6 +15,10 @@ const runner = new SystemRunner(world);
 // Setup Pixi and mount it to the body
 const pixi = await PixiRenderer.create(document.getElementById('app') || document.body);
 runner.addSystem(pixi);
+
+const interaction = new InteractionSystem(pixi.app)
+interaction.init(world);
+runner.addSystem(interaction);
 
 // Add physics
 runner.addSystem(new PhysicsSystem({

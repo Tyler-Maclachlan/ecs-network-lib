@@ -56,12 +56,12 @@ export class PhysicsSystem implements System {
 
         // 1. Repulsion
         for (const a of entities) {
-            if (!Position.hasComponent(a) || FixedPosition.has(a)) continue;
+            if (!Position.hasComponent(a)) continue;
 
             //seen.add(a);
 
             for (const b of entities) {
-                if (a === b || !Position.hasComponent(b) || FixedPosition.has(b)) continue;
+                if (a === b || !Position.hasComponent(b)) continue;
 
                 const dx = Position.X[a] - Position.X[b];
                 const dy = Position.Y[a] - Position.Y[b];
@@ -95,7 +95,7 @@ export class PhysicsSystem implements System {
         const centerY = window.innerHeight / 2;
 
         for (const entity of entities) {
-            if (!Position.hasComponent(entity) || !Velocity.hasComponent(entity) || FixedPosition.has(entity)) continue;
+            if (!Position.hasComponent(entity) || !Velocity.hasComponent(entity)) continue;
 
             const dx = centerX - Position.X[entity];
             const dy = centerY - Position.Y[entity];

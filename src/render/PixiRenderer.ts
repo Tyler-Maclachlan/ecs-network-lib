@@ -17,6 +17,7 @@ import { DebugSpring } from "@core/components/DebugSpring";
 import { DebugRepulsion } from "@core/components/DebugRepulsion";
 import { DebugGravity } from "@core/components/DebugGravity";
 import { FixedPosition } from "@core/components/FixedPosition";
+import { Selected } from "@core/components/Selected";
 
 export class PixiRenderer implements System {
     public app: Application;
@@ -38,15 +39,6 @@ export class PixiRenderer implements System {
     private gravityLines = new Map<Entity, Graphics>();
     private gravityCrosshair: Graphics | null = null;
 
-    private isPanning = false;
-    private lastPanX = 0;
-    private lastPanY = 0;
-    private zoom = 1;
-    private draggingNode: Entity | null = null;
-    private dragOffset = { x: 0, y: 0 };
-
-
-
     private debugMode = true;
 
     private constructor(app: Application) {
@@ -60,8 +52,6 @@ export class PixiRenderer implements System {
         }
 
         this.app.stage.addChild(this.networkContainer);
-        this.setupInteractionHandlers();
-
 
         if (this.debugMode) {
             this.setupStaticDebugElements();
@@ -90,8 +80,6 @@ export class PixiRenderer implements System {
 
         g.eventMode = "static";
         g.cursor = "grab";
-        g.on("pointerdown", (event) => this.onNodeDragStart(entity, event));
-
 
         const label = new Text({
             text: String(entity),
@@ -117,55 +105,6 @@ export class PixiRenderer implements System {
             this.debugContainer.removeChild(arrow);
             this.velocityArrows.delete(entity);
         }
-    }
-
-    private onNodeDragStart(entity: Entity, event: FederatedPointerEvent) {
-        this.draggingNode = entity;
-        const g = this.nodeGraphics.get(entity);
-        if (!g) return;
-
-        FixedPosition.add(entity); // Prevent physics from moving this node
-        g.cursor = "grabbing";
-
-        const localPos = event.getLocalPosition(this.networkContainer);
-        const nodeX = Position.X[entity];
-        const nodeY = Position.Y[entity];
-
-        this.dragOffset.x = nodeX - localPos.x;
-        this.dragOffset.y = nodeY - localPos.y;
-
-        this.app.stage.on("pointermove", this.onNodeDragMove, this);
-        this.app.stage.on("pointerup", this.onNodeDragEnd, this);
-        this.app.stage.on("pointerupoutside", this.onNodeDragEnd, this);
-    }
-
-    private onNodeDragMove(event: FederatedPointerEvent) {
-        if (this.draggingNode === null) return;
-
-        const localPos = event.getLocalPosition(this.networkContainer);
-        const entity = this.draggingNode;
-
-        Position.X[entity] = localPos.x + this.dragOffset.x;
-        Position.Y[entity] = localPos.y + this.dragOffset.y;
-
-        if (Velocity.hasComponent(entity)) {
-            Velocity.X[entity] = 0;
-            Velocity.Y[entity] = 0;
-        }
-    }
-
-    private onNodeDragEnd() {
-        if (this.draggingNode !== null) {
-            const g = this.nodeGraphics.get(this.draggingNode);
-            if (g) g.cursor = "grab";
-            FixedPosition.remove(this.draggingNode!);
-        }
-
-        this.draggingNode = null;
-        
-        this.app.stage.off("pointermove", this.onNodeDragMove, this);
-        this.app.stage.off("pointerup", this.onNodeDragEnd, this);
-        this.app.stage.off("pointerupoutside", this.onNodeDragEnd, this);
     }
 
 
@@ -252,71 +191,6 @@ export class PixiRenderer implements System {
             this.renderDebugRepulsions(world);
             this.renderDebugGravities(world);
         }
-    }
-
-    private setupInteractionHandlers() {
-        const stage = this.app.stage;
-        const canvas = this.app.canvas;
-
-        stage.eventMode = "static"; // Use static event mode for better performance
-        stage.hitArea = this.app.screen; // Make the whole stage interactive
-
-        stage.on("pointerdown", (e) => {
-            if (e.button === 0) { // left button
-                this.isPanning = true;
-                this.lastPanX = e.clientX;
-                this.lastPanY = e.clientY;
-            }
-        });
-
-        stage.on("pointerup", () => {
-            this.isPanning = false;
-        })
-
-        stage.on("pointerupoutside", () => {
-            this.isPanning = false;
-        });
-
-        stage.on('pointermove', (e) => {
-            if (this.draggingNode !== null || !this.isPanning) return; // 👈 Skip panning if dragging a node
-
-            const pos = e.global;
-            const dx = pos.x - this.lastPanX;
-            const dy = pos.y - this.lastPanY;
-
-            this.networkContainer.x += dx;
-            this.networkContainer.y += dy;
-
-            this.lastPanX = pos.x;
-            this.lastPanY = pos.y;
-        });
-
-        stage.on('wheel', (e) => {
-            e.preventDefault();
-
-            const scaleFactor = 1.1;
-            const mouse = { x: e.clientX, y: e.clientY };
-
-            const worldPos = {
-                x: (mouse.x - this.networkContainer.x) / this.zoom,
-                y: (mouse.y - this.networkContainer.y) / this.zoom,
-            };
-
-            const direction = e.deltaY > 0 ? 1 : -1;
-            const zoomChange = direction > 0 ? 1 / scaleFactor : scaleFactor;
-            this.zoom *= zoomChange;
-
-            this.networkContainer.scale.set(this.zoom);
-
-            const newScreenPos = {
-                x: worldPos.x * this.zoom + this.networkContainer.x,
-                y: worldPos.y * this.zoom + this.networkContainer.y,
-            };
-
-            // Adjust position to keep zoom centered on mouse
-            this.networkContainer.x += mouse.x - newScreenPos.x;
-            this.networkContainer.y += mouse.y - newScreenPos.y;
-        })
     }
 
 
